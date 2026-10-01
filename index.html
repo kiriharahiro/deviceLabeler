@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PC Repairer - Device Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Material+Icons+Round&display=swap" rel="stylesheet">
+  <!-- QRスキャナーライブラリ: html5-qrcode (nfcQrWriter_v01 と同一の安定バージョン 2.3.8) -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-glow: rgba(99, 102, 241, 0.35);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.35);
+      --danger: #e11d48;
+      --danger-hover: #f43f5e;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+    }
+    body { 
+      font-family: 'Inter', 'Noto Sans JP', sans-serif; 
+      background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 60%, #020617 100%); 
+      background-attachment: fixed;
+      color: var(--text-main); 
+      min-height: 100vh; 
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header { 
+      width: 100%;
+      padding: 16px 20px; 
+      text-align: center; 
+      background: rgba(15, 23, 42, 0.6); 
+      backdrop-filter: blur(12px); 
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08); 
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); 
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 520px;
+    }
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-logo h1 { 
+      margin: 0; 
+      font-size: 1.25rem; 
+      letter-spacing: 0.5px; 
+      font-weight: 700; 
+      background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .logo-icon {
+      font-size: 1.5rem;
+      color: var(--primary);
+    }
+    .container { width: 92%; max-width: 500px; margin: 20px auto 40px auto; display: flex; flex-direction: column; gap: 16px; }
+    .glass-panel { 
+      background: rgba(30, 41, 59, 0.72); 
+      border-radius: 18px; 
+      border: 1px solid rgba(255, 255, 255, 0.08); 
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45); 
+      backdrop-filter: blur(14px); 
+      -webkit-backdrop-filter: blur(14px);
+      padding: 20px; 
+    }
+    label { display: block; margin-bottom: 8px; font-size: 0.88rem; font-weight: 600; color: #a5b4fc; }
+    input, select { 
+      width: 100%; 
+      padding: 12px 14px; 
+      margin-bottom: 18px; 
+      border-radius: 10px; 
+      border: 1px solid rgba(255, 255, 255, 0.12); 
+      background: rgba(15, 23, 42, 0.6); 
+      color: #fff; 
+      font-size: 0.95rem; 
+      outline: none; 
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    select option { background: #1e1e2f; color: #fff; }
+    button { 
+      width: 100%; 
+      padding: 13px; 
+      border-radius: 10px; 
+      border: none; 
+      background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%); 
+      color: #fff; 
+      font-size: 0.95rem; 
+      font-weight: 700; 
+      cursor: pointer; 
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+      box-shadow: 0 4px 14px var(--primary-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    button:hover { opacity: 0.95; }
+    button:active { transform: scale(0.98); }
+    button:disabled { background: #334155; color: #64748b; cursor: not-allowed; box-shadow: none; }
+    
+    .btn-secondary { 
+      background: rgba(255, 255, 255, 0.08); 
+      border: 1px solid rgba(255, 255, 255, 0.12); 
+      box-shadow: none; 
+      color: var(--text-main);
+    }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+    
+    .btn-danger { 
+      background: linear-gradient(135deg, var(--danger) 0%, #be123c 100%); 
+      margin-top: 16px; 
+      box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3); 
+    }
+    .hidden { display: none !important; }
+
+    /* カメラコントロール＆ビューポートスタイル (nfcQrWriter_v01 準拠) */
+    .scanner-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .scanner-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .camera-controls {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-icon {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      box-shadow: none;
+      transition: all 0.2s ease;
+    }
+    .btn-icon:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .btn-icon .material-icons-round {
+      font-size: 1.25rem;
+    }
+
+    .scanner-viewport {
+      position: relative;
+      width: 100%;
+      min-height: 250px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(99, 102, 241, 0.4);
+    }
+    #reader {
+      width: 100% !important;
+      border: none !important;
+    }
+    #reader video,
+    #reader__scan_region video,
+    .scanner-viewport video,
+    #reader canvas {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      transform: none !important;
+      -webkit-transform: none !important;
+    }
+    .is-mirrored #reader video,
+    .is-mirrored #reader__scan_region video,
+    .is-mirrored .scanner-viewport video {
+      transform: scaleX(-1) !important;
+      -webkit-transform: scaleX(-1) !important;
+    }
+    #reader__scan_region {
+      background: transparent !important;
+    }
+    #reader__dashboard {
+      display: none !important;
+    }
+
+    /* スキャナーのアニメーションガイド枠 */
+    .scanner-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .scan-box {
+      width: 70%;
+      height: 70%;
+      border: 2px dashed rgba(99, 102, 241, 0.8);
+      border-radius: 14px;
+      position: relative;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+    .scan-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #818cf8, #a5b4fc, transparent);
+      box-shadow: 0 0 8px #818cf8;
+      animation: scanAnim 2.2s ease-in-out infinite alternate;
+    }
+    @keyframes scanAnim {
+      0% { top: 6%; opacity: 0.3; }
+      50% { opacity: 1; }
+      100% { top: 92%; opacity: 0.3; }
+    }
+
+    .camera-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 30px 16px;
+      text-align: center;
+    }
+
+    .list-area { 
+      max-height: 220px; 
+      overflow-y: auto; 
+      background: rgba(15, 23, 42, 0.6); 
+      border-radius: 10px; 
+      padding: 12px; 
+      border: 1px solid rgba(255, 255, 255, 0.08); 
+    }
+    .list-item { 
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08); 
+      padding: 10px 4px; 
+      font-size: 0.85rem; 
+      line-height: 1.4;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-item-title { font-weight: 600; color: #cbd5e1; }
+    .list-item-sub { color: #94a3b8; font-size: 0.78rem; margin-top: 2px; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; margin-left: 6px; }
+    .badge-manual { background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.3); }
+    .badge-scan { background: rgba(34, 197, 94, 0.2); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .log-box { font-size: 0.8rem; color: #94a3b8; margin-top: 12px; text-align: center; }
+
+    /* モーダルスタイル */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .modal-content {
+      width: 100%;
+      max-width: 440px;
+      padding: 24px;
+      border-radius: 18px;
+    }
+    .input-group {
+      display: flex;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+    .input-group .prefix {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-right: none;
+      border-radius: 10px 0 0 10px;
+      padding: 12px 14px;
+      font-weight: 700;
+      color: #a5b4fc;
+      display: flex;
+      align-items: center;
+      font-size: 0.95rem;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .input-group input {
+      margin-bottom: 0;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+
+    /* チェックボックス（故障部位）用スタイル */
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+      max-height: 180px;
+      overflow-y: auto;
+      padding: 4px 2px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      color: #e2e8f0;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+      word-break: break-all;
+    }
+    .checkbox-label:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .checkbox-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      cursor: pointer;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+    }
+    .checkbox-label.checked {
+      background: rgba(99, 102, 241, 0.25);
+      border-color: var(--primary);
+      color: #fff;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-logo">
+      <span class="material-icons-round logo-icon">qr_code_scanner</span>
+      <h1>PC Repairer</h1>
+    </div>
+    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">Device Manager</div>
+  </header>
+
+  <div class="container">
+    
+    <!-- 画面1: 初期設定・作業開始画面 -->
+    <div id="setup-screen" class="glass-panel">
+      <label>顧客選択</label>
+      <select id="customer-select" onchange="onCustomerChange()">
+        <option value="">(スプレッドシートから読み込み中...)</option>
+      </select>
+
+      <label>サイトコード選択</label>
+      <select id="site-code-select">
+        <option value="">(顧客を選択してください)</option>
+      </select>
+
+      <button id="start-btn" onclick="startJob()">
+        <span class="material-icons-round">play_arrow</span>
+        <span>作業開始 (データ取得)</span>
+      </button>
+      <div id="setup-log" class="log-box">スプレッドシートから設定をロード中...</div>
+    </div>
+
+    <!-- 画面2: QR読み取り・作業画面 -->
+    <div id="scan-screen" class="hidden">
+      <!-- 1. QRスキャナーカード -->
+      <div class="glass-panel">
+        <div class="scanner-header">
+          <div class="scanner-title">
+            <span class="material-icons-round" style="color: var(--primary);">photo_camera</span>
+            <span>QRコード読取</span>
+          </div>
+          <div class="camera-controls">
+            <button id="btn-mirror-toggle" class="btn-icon" title="左右反転（ミラー）切替" onclick="toggleMirrorEffect()">
+              <span class="material-icons-round" id="mirror-icon">swap_horiz</span>
+            </button>
+            <button id="btn-toggle-camera" class="btn-icon" title="カメラ開始/停止" onclick="toggleCamera()">
+              <span class="material-icons-round" id="camera-icon">videocam</span>
+            </button>
+            <button id="btn-switch-camera" class="btn-icon" title="内・外カメラ切替" onclick="switchCamera()">
+              <span class="material-icons-round">flip_camera_ios</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- カメラプレビュー領域 -->
+        <div class="scanner-viewport">
+          <div id="reader"></div>
+          <div class="scanner-overlay" id="scanner-overlay">
+            <div class="scan-box">
+              <div class="scan-line"></div>
+            </div>
+          </div>
+          <div id="camera-off-placeholder" class="camera-placeholder hidden" style="cursor: pointer;" onclick="startCamera()">
+            <span class="material-icons-round" style="font-size: 3rem; color: #818cf8;">videocam</span>
+            <p style="font-size: 0.95rem; font-weight: 700; color: #fff;">ここをクリックしてカメラを起動</p>
+            <span style="font-size: 0.75rem; color: #94a3b8;">（ブラウザのカメラ許可が必要です）</span>
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 8px; margin-top: 14px;">
+          <label class="btn-secondary" style="flex: 1; text-align: center; padding: 11px 4px; margin: 0; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; justify-content: center; border-radius: 10px; gap: 4px;">
+            <span class="material-icons-round" style="font-size: 1.1rem;">photo_library</span>
+            <span>写真読取</span>
+            <input type="file" id="qr-file-input" accept="image/*" capture="environment" style="display: none;" onchange="scanImageFile(event)">
+          </label>
+          <button type="button" class="btn-secondary" onclick="openManualModal()" style="flex: 1; margin: 0; padding: 11px 4px; font-size: 0.85rem; border-radius: 10px;">
+            <span class="material-icons-round" style="font-size: 1.1rem;">keyboard</span>
+            <span>手入力</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. 処理済みリストカード -->
+      <div class="glass-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <label style="margin-bottom:0;">処理済みリスト (<span id="count-display">0</span>台)</label>
+          <span style="font-size:0.8rem; color:#a5b4fc; font-weight: 600;" id="customer-badge"></span>
+        </div>
+        <div class="list-area" id="result-list"></div>
+        <button id="finish-btn" class="btn-danger" onclick="finishJob()">
+          <span class="material-icons-round">cloud_upload</span>
+          <span>すべての更新を終えて終了</span>
+        </button>
+        <div id="scan-log" class="log-box"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 手入力モーダル -->
+  <div id="manual-modal" class="modal-overlay hidden">
+    <div class="glass-panel modal-content">
+      <h2 style="margin-top:0; margin-bottom:18px; font-size:1.15rem; color:#f0f0ff; text-align:center;">手入力登録</h2>
+      
+      <label>S/N (先頭に自動で "PF" が付きます)</label>
+      <div class="input-group">
+        <span class="prefix">PF</span>
+        <input type="text" id="manual-sn-input" placeholder="12345" style="text-transform:uppercase;">
+      </div>
+
+      <label>Device ID (<span id="modal-customer-name"></span>: <span id="modal-id-rule-desc"></span>)</label>
+      <div class="input-group">
+        <span class="prefix" id="modal-device-id-prefix">S25-</span>
+        <input type="text" inputmode="numeric" id="manual-device-id-input" placeholder="数値のみ入力">
+      </div>
+
+      <label>故障部位 (複数選択可)</label>
+      <div id="manual-failure-parts-container" class="checkbox-grid">
+        <!-- スプレッドシートから取得したマスターデータが挿入されます -->
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 10px;">
+        <button type="button" class="btn-secondary" onclick="closeManualModal()" style="margin-top:0; width: 50%;">キャンセル</button>
+        <button type="button" onclick="submitManualInput()" style="width: 50%;">登録</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 設定 (GAS URL)
+    // ==========================================
+    const GAS_URL = "https://script.google.com/a/macros/kiriplaypark.com/s/AKfycbxQybnNaO8-3ZemD9AhQvUjHHUeOXKihG8t6kO8JwnSGTkm4dUx8t0WbMOm_SDGczUD/exec";
+
+    // アプリ状態（すべてスプレッドシートから動的に取得・更新されます）
+    let state = {
+      siteCode: "",
+      customer: "",
+      dateString: "",
+      currentLotCount: 0,
+      currentOrderCount: 0,
+      customers: [],
+      siteCodes: [],
+      customerSiteMap: {},
+      failureParts: [],
+      printerIp: "192.168.11.50",
+      scannedDataList: [],
+      // カメラ関連状態 (nfcQrWriter_v01 準拠)
+      isCameraRunning: false,
+      html5QrCode: null,
+      currentCameraIndex: 0,
+      availableCameras: [],
+      isMirrored: false
+    };
+
+    // ==========================================
+    // Web Audio API & バイブレーション (nfcQrWriter_v01 準拠)
+    // ==========================================
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'qr-scan' || type === 'success') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1600, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+      } else if (type === 'error') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(280, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+      }
+    }
+
+    function triggerVibration(type) {
+      if (!('vibrate' in navigator)) return;
+      if (type === 'qr-scan') {
+        navigator.vibrate(60);
+      } else if (type === 'error') {
+        navigator.vibrate(300);
+      }
+    }
+
+    window.onload = async () => {
+      // 手入力S/Nの小文字入力時に自動で大文字へ変換
+      const snInput = document.getElementById("manual-sn-input");
+      if (snInput) {
+        snInput.addEventListener("input", (e) => {
+          e.target.value = e.target.value.toUpperCase();
+        });
+      }
+
+      // 起動時にスプレッドシートからマスター設定（顧客一覧、サイトコード、故障部位等）を自動ロード
+      await loadInitialSettings();
+    };
+
+    function showLog(elementId, msg) {
+      const el = document.getElementById(elementId);
+      if (el) el.innerText = msg;
+    }
+
+    // ==========================================
+    // 顧客切り替え時に対応するサイトコード一覧を生成
+    // ==========================================
+    function onCustomerChange() {
+      const cust = document.getElementById("customer-select").value;
+      const siteSelect = document.getElementById("site-code-select");
+      siteSelect.innerHTML = "";
+
+      let availableSites = [];
+      if (state.customerSiteMap && state.customerSiteMap[cust] && state.customerSiteMap[cust].length > 0) {
+        availableSites = state.customerSiteMap[cust];
+      } else if (state.siteCodes && state.siteCodes.length > 0) {
+        availableSites = state.siteCodes;
+      } else {
+        availableSites = ["CRB_01", "CRB_02"];
+      }
+
+      availableSites.forEach(site => {
+        const opt = document.createElement("option");
+        opt.value = site;
+        opt.innerText = site;
+        siteSelect.appendChild(opt);
+      });
+
+      // 保存されたサイトコードがあれば復元
+      const savedSite = localStorage.getItem("PCRepairer_SiteCode");
+      if (savedSite && availableSites.includes(savedSite)) {
+        siteSelect.value = savedSite;
+      }
+    }
+
+    // ==========================================
+    // GAS通信ラッパー (google.script.run / fetch 両対応)
+    // ==========================================
+    function callGasApi(action, params = {}) {
+      return new Promise((resolve, reject) => {
+        // 1. GAS Web App環境内（google.script.run が利用可能な場合）
+        if (typeof google !== "undefined" && google.script && google.script.run) {
+          if (action === "init") {
+            google.script.run
+              .withSuccessHandler(res => {
+                if (res && res.status === "success") resolve(res);
+                else reject(new Error(res ? res.message : "取得エラー"));
+              })
+              .withFailureHandler(err => reject(new Error(err.message || err)))
+              .apiInit();
+            return;
+          } else if (action === "start") {
+            google.script.run
+              .withSuccessHandler(res => {
+                if (res && res.status === "success") resolve(res);
+                else reject(new Error(res ? res.message : "取得エラー"));
+              })
+              .withFailureHandler(err => reject(new Error(err.message || err)))
+              .apiStart(params);
+            return;
+          } else if (action === "finish") {
+            google.script.run
+              .withSuccessHandler(res => {
+                if (res && res.status === "success") resolve(res);
+                else reject(new Error(res ? res.message : "更新エラー"));
+              })
+              .withFailureHandler(err => reject(new Error(err.message || err)))
+              .apiFinish(params);
+            return;
+          }
+        }
+
+        // 2. 外部ブラウザからの fetch 通信
+        if (!GAS_URL || GAS_URL.includes("ここに")) {
+          reject(new Error("GAS_URLが設定されていません。"));
+          return;
+        }
+
+        fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: action, ...params })
+        })
+        .then(res => res.text())
+        .then(text => {
+          try {
+            const json = JSON.parse(text);
+            if (json.status !== "success") {
+              throw new Error(json.message || "処理エラー");
+            }
+            resolve(json);
+          } catch (e) {
+            if (text.includes("<!DOCTYPE") || text.includes("<html") || text.includes("Google Accounts")) {
+              throw new Error("GASアクセス権限エラー: デプロイ設定で「アクセスできるユーザー」を「全員 (Anyone)」に設定してください。");
+            }
+            throw new Error(e.message || "不正なレスポンスを受信しました");
+          }
+        })
+        .catch(reject);
+      });
+    }
+
+    // ==========================================
+    // 0. 初期設定ロード (スプレッドシートから動的取得)
+    // ==========================================
+    async function loadInitialSettings() {
+      showLog("setup-log", "スプレッドシートから最新マスター設定を取得中...");
+      try {
+        const result = await callGasApi("init");
+
+        if (result.status === "success" && result.data) {
+          // 顧客リスト・サイトコードマップの反映
+          if (Array.isArray(result.data.customers) && result.data.customers.length > 0) {
+            state.customers = result.data.customers;
+            state.customerSiteMap = result.data.customerSiteMap || {};
+            state.siteCodes = result.data.siteCodes || [];
+
+            const custSelect = document.getElementById("customer-select");
+            custSelect.innerHTML = "";
+            state.customers.forEach(c => {
+              const opt = document.createElement("option");
+              opt.value = c;
+              opt.innerText = c;
+              custSelect.appendChild(opt);
+            });
+
+            // 保存された顧客があれば復元
+            const savedCust = localStorage.getItem("PCRepairer_Customer");
+            if (savedCust && state.customers.includes(savedCust)) {
+              custSelect.value = savedCust;
+            }
+
+            onCustomerChange();
+          }
+
+          // 故障部位マスターの反映
+          if (Array.isArray(result.data.failureParts) && result.data.failureParts.length > 0) {
+            state.failureParts = result.data.failureParts;
+          }
+
+          // プリンターIPの反映
+          if (result.data.printerIp) {
+            state.printerIp = result.data.printerIp;
+          }
+
+          showLog("setup-log", "スプレッドシートの最新設定を読み込みました。");
+        }
+      } catch (e) {
+        console.warn("初期設定ロード警告:", e);
+        showLog("setup-log", "準備完了（作業開始時に再取得します）");
+        // フォールバック用の初期選択肢
+        const custSelect = document.getElementById("customer-select");
+        if (custSelect.options.length <= 1) {
+          custSelect.innerHTML = `
+            <option value="久喜市">久喜市</option>
+            <option value="加須市">加須市</option>
+          `;
+          state.customerSiteMap = {
+            "久喜市": ["CRB_01", "CRB_02"],
+            "加須市": ["CRB_01", "CRB_02"]
+          };
+          onCustomerChange();
+        }
+      }
+    }
+
+    // ==========================================
+    // 1. 作業開始処理 (GASから最新番号・設定表を取得)
+    // ==========================================
+    async function startJob() {
+      const customer = document.getElementById("customer-select").value;
+      const siteCode = document.getElementById("site-code-select").value;
+      
+      if (!customer) { alert("顧客を選択してください。"); return; }
+      if (!siteCode) { alert("サイトコードを選択してください。"); return; }
+      
+      localStorage.setItem("PCRepairer_Customer", customer);
+      localStorage.setItem("PCRepairer_SiteCode", siteCode);
+      state.siteCode = siteCode;
+      state.customer = customer;
+
+      showLog("setup-log", "GASから最新情報・設定データを取得中...");
+      document.getElementById("start-btn").disabled = true;
+
+      try {
+        const result = await callGasApi("start", { customer: customer, siteCode: siteCode });
+
+        // GASから取得した最新の情報をセット
+        state.dateString = result.data.dateString;
+        state.currentLotCount = result.data.lastLotCount;
+        state.currentOrderCount = result.data.lastOrderCount;
+
+        if (result.data.failureParts && Array.isArray(result.data.failureParts) && result.data.failureParts.length > 0) {
+          state.failureParts = result.data.failureParts;
+        }
+        if (result.data.printerIp) {
+          state.printerIp = result.data.printerIp;
+        }
+
+        // 画面切り替えとカメラ起動
+        document.getElementById("setup-screen").classList.add("hidden");
+        document.getElementById("scan-screen").classList.remove("hidden");
+        document.getElementById("customer-badge").innerText = `${customer} | ${siteCode}`;
+        
+        await initCameraSystem();
+
+      } catch (e) {
+        showLog("setup-log", "エラー: " + e.message);
+        document.getElementById("start-btn").disabled = false;
+      }
+    }
+
+    // ==========================================
+    // カメラ制御ロジック (nfcQrWriter_v01 完全準拠 + 強化版)
+    // ==========================================
+    async function initCameraSystem() {
+      try {
+        state.html5QrCode = new Html5Qrcode("reader");
+        try {
+          const devices = await Html5Qrcode.getCameras();
+          if (devices && devices.length) {
+            state.availableCameras = devices;
+          }
+        } catch (camErr) {
+          console.warn("getCameras warning (will try direct facingMode):", camErr);
+        }
+        await startCamera();
+      } catch (err) {
+        console.warn("カメラ初期化エラー:", err);
+        handleCameraError(err);
+      }
+    }
+
+    function handleCameraError(err) {
+      const msg = (err && (err.message || err.name || err.toString())) || "";
+      console.error("カメラエラー詳細:", err);
+      
+      let userMsg = "⚠️ カメラが起動できませんでした。";
+      if (/permission|denied|NotAllowedError/i.test(msg)) {
+        userMsg = "⚠️ カメラのアクセス権限がブロックされています。ブラウザのアドレスバー（🔒またはサイト設定）から「カメラを許可」してください。";
+      } else if (/NotFound|device/i.test(msg)) {
+        userMsg = "⚠️ 有効なカメラが見つかりません。カメラが接続されているかご確認ください。";
+      } else {
+        userMsg = `⚠️ カメラエラー: ${msg}（「写真読取」または「手入力」もご利用いただけます）`;
+      }
+      
+      showLog("scan-log", userMsg);
+      document.getElementById('camera-off-placeholder').classList.remove('hidden');
+      document.getElementById('scanner-overlay').classList.add('hidden');
+      document.getElementById('camera-icon').textContent = 'videocam_off';
+    }
+
+    async function startCamera() {
+      if (!state.html5QrCode) {
+        state.html5QrCode = new Html5Qrcode("reader");
+      }
+      if (state.isCameraRunning) return;
+
+      const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+        onQrScanSuccess(decodedText);
+      };
+
+      // 動的 qrbox 関数（解像度に合わせて正方形を維持）
+      const config = {
+        fps: 15,
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+          const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7);
+          return { width: edge, height: edge };
+        }
+      };
+
+      let cameraParam;
+      if (state.availableCameras.length > 0) {
+        cameraParam = state.availableCameras[state.currentCameraIndex].id;
+      } else {
+        cameraParam = { facingMode: "environment" };
+      }
+
+      try {
+        showLog("scan-log", "カメラを接続中...");
+        await state.html5QrCode.start(
+          cameraParam,
+          config,
+          qrCodeSuccessCallback,
+          (errorMessage) => {}
+        );
+
+        state.isCameraRunning = true;
+        document.getElementById('camera-icon').textContent = 'videocam';
+        document.getElementById('camera-off-placeholder').classList.add('hidden');
+        document.getElementById('scanner-overlay').classList.remove('hidden');
+        showLog("scan-log", "カメラ起動中。QRコードをかざしてください。");
+        applyMirrorEffect();
+      } catch (err) {
+        console.warn('初回カメラ起動失敗、標準モード(user)で再試行:', err);
+        try {
+          await state.html5QrCode.start(
+            { facingMode: "user" },
+            config,
+            qrCodeSuccessCallback,
+            (errorMessage) => {}
+          );
+          state.isCameraRunning = true;
+          document.getElementById('camera-icon').textContent = 'videocam';
+          document.getElementById('camera-off-placeholder').classList.add('hidden');
+          document.getElementById('scanner-overlay').classList.remove('hidden');
+          showLog("scan-log", "カメラ起動中。QRコードをかざしてください。");
+          applyMirrorEffect();
+        } catch (fallbackErr) {
+          handleCameraError(fallbackErr);
+        }
+      }
+
+      setTimeout(applyMirrorEffect, 300);
+      setTimeout(applyMirrorEffect, 1000);
+    }
+
+    async function stopCamera() {
+      if (state.html5QrCode && state.isCameraRunning) {
+        try {
+          await state.html5QrCode.stop();
+          state.isCameraRunning = false;
+          document.getElementById('camera-icon').textContent = 'videocam_off';
+          document.getElementById('camera-off-placeholder').classList.remove('hidden');
+          document.getElementById('scanner-overlay').classList.add('hidden');
+          showLog("scan-log", "カメラを停止しました。");
+        } catch (err) {
+          console.error("stopCamera error:", err);
+        }
+      }
+    }
+
+    async function toggleCamera() {
+      if (state.isCameraRunning) {
+        await stopCamera();
+      } else {
+        await startCamera();
+      }
+    }
+
+    async function switchCamera() {
+      if (state.availableCameras.length <= 1) {
+        // 利用可能なカメラが取得できていない場合は再取得を試行
+        try {
+          const devices = await Html5Qrcode.getCameras();
+          if (devices && devices.length > 1) {
+            state.availableCameras = devices;
+          } else {
+            showLog("scan-log", "利用可能な切り替え先カメラがありません。");
+            return;
+          }
+        } catch(e) {
+          showLog("scan-log", "利用可能な切り替え先カメラがありません。");
+          return;
+        }
+      }
+      await stopCamera();
+      state.currentCameraIndex = (state.currentCameraIndex + 1) % state.availableCameras.length;
+      await startCamera();
+    }
+
+    // 左右反転（ミラー表示）切替
+    function applyMirrorEffect() {
+      const viewport = document.querySelector('.scanner-viewport');
+      if (viewport) {
+        if (state.isMirrored) {
+          viewport.classList.add('is-mirrored');
+        } else {
+          viewport.classList.remove('is-mirrored');
+        }
+      }
+
+      const videos = document.querySelectorAll('#reader video, #reader__scan_region video, .scanner-viewport video');
+      videos.forEach(v => {
+        if (state.isMirrored) {
+          v.style.setProperty('transform', 'scaleX(-1)', 'important');
+          v.style.setProperty('-webkit-transform', 'scaleX(-1)', 'important');
+        } else {
+          v.style.setProperty('transform', 'none', 'important');
+          v.style.setProperty('-webkit-transform', 'none', 'important');
+        }
+      });
+
+      const btnMirror = document.getElementById('btn-mirror-toggle');
+      if (btnMirror) {
+        btnMirror.style.background = state.isMirrored ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.08)';
+      }
+    }
+
+    function toggleMirrorEffect() {
+      state.isMirrored = !state.isMirrored;
+      applyMirrorEffect();
+      showLog("scan-log", state.isMirrored ? "カメラ画像を【左右反転（ミラー表示）】にしました。" : "カメラ画像を【標準（通常表示）】に戻しました。");
+    }
+
+    // カメラ撮影または画像ファイル選択からのQRスキャン
+    async function scanImageFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      showLog("scan-log", "撮影画像を解析中...");
+      try {
+        const fileScanner = new Html5Qrcode("reader");
+        const decodedText = await fileScanner.scanFile(file, true);
+        try { await fileScanner.clear(); } catch(e) {}
+        onQrScanSuccess(decodedText);
+      } catch (err) {
+        playSound('error');
+        triggerVibration('error');
+        alert("QRコードが認識できませんでした。ピントを合わせて再度撮影してください。");
+        showLog("scan-log", "QR認識失敗: 再度撮影するか手入力してください。");
+      } finally {
+        event.target.value = "";
+      }
+    }
+
+    // 日時文字列取得 (YYYY/MM/DD HH:mm:ss)
+    function getCurrentTimestamp() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const h = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      return `${y}/${m}/${d} ${h}:${min}:${s}`;
+    }
+
+    // ==========================================
+    // 2. 読み取り＆手入力ロジック
+    // ==========================================
+    let lastScanTime = 0;
+    function onQrScanSuccess(decodedText) {
+      const now = Date.now();
+      if (now - lastScanTime < 3000) return; 
+      lastScanTime = now;
+
+      const rawText = decodedText.trim();
+      playSound('qr-scan');
+      triggerVibration('qr-scan');
+
+      if (rawText.length < 18) {
+        showLog("scan-log", `QR検出: ${rawText} (18桁未満のため手入力または再スキャンしてください)`);
+        // 桁数が異なる場合でもSNとして扱えるよう柔軟にパース
+        processDeviceData({
+          qrData: rawText,
+          sn: rawText.substring(0, 8).toUpperCase(),
+          mo: rawText.length > 8 ? rawText.substring(8).toUpperCase() : "",
+          deviceId: "",
+          symptom: "",
+          isManual: false
+        });
+        return;
+      }
+
+      const sn = rawText.substring(0, 8).toUpperCase();
+      const mo = rawText.substring(8, 18).toUpperCase();
+      processDeviceData({
+        qrData: rawText,
+        sn: sn,
+        mo: mo,
+        deviceId: "",
+        symptom: "",
+        isManual: false
+      });
+    }
+
+    // --- 手入力モーダル制御 ---
+    function openManualModal() {
+      const prefixSpan = document.getElementById("modal-device-id-prefix");
+      const descSpan = document.getElementById("modal-id-rule-desc");
+      const custNameSpan = document.getElementById("modal-customer-name");
+      const numberInput = document.getElementById("manual-device-id-input");
+      const snInput = document.getElementById("manual-sn-input");
+      
+      custNameSpan.innerText = state.customer;
+      snInput.value = "";
+      numberInput.value = "";
+
+      if (state.customer === "加須市") {
+        prefixSpan.innerText = "Kazoedu";
+        descSpan.innerText = "4桁数値";
+        numberInput.placeholder = "4桁の数字 (例: 1234)";
+        numberInput.maxLength = 4;
+      } else {
+        prefixSpan.innerText = "S25-";
+        descSpan.innerText = "5桁数値";
+        numberInput.placeholder = "5桁の数字 (例: 12345)";
+        numberInput.maxLength = 5;
+      }
+
+      // 故障部位チェックボックス一覧の構築
+      const container = document.getElementById("manual-failure-parts-container");
+      container.innerHTML = "";
+      state.failureParts.forEach((part, index) => {
+        const label = document.createElement("label");
+        label.className = "checkbox-label";
+        
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = part;
+        checkbox.id = `part-check-${index}`;
+        
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) {
+            label.classList.add("checked");
+          } else {
+            label.classList.remove("checked");
+          }
+        });
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(part));
+        container.appendChild(label);
+      });
+
+      document.getElementById("manual-modal").classList.remove("hidden");
+      snInput.focus();
+    }
+
+    function closeManualModal() {
+      document.getElementById("manual-modal").classList.add("hidden");
+    }
+
+    function submitManualInput() {
+      const snVal = document.getElementById("manual-sn-input").value.trim();
+      const numVal = document.getElementById("manual-device-id-input").value.trim();
+      
+      const checkedBoxes = document.querySelectorAll("#manual-failure-parts-container input[type='checkbox']:checked");
+      const selectedParts = Array.from(checkedBoxes).map(cb => cb.value);
+      const symptom = selectedParts.join(", ");
+
+      if (!snVal) {
+        alert("S/N を入力してください。");
+        return;
+      }
+
+      let deviceId = "";
+      if (state.customer === "加須市") {
+        if (!/^\d{4}$/.test(numVal)) {
+          alert("加須市のDevice IDは4桁の数値を入力してください。");
+          return;
+        }
+        deviceId = "Kazoedu" + numVal;
+      } else {
+        if (!/^\d{5}$/.test(numVal)) {
+          alert("久喜市のDevice IDは5桁の数値を入力してください。");
+          return;
+        }
+        deviceId = "S25-" + numVal;
+      }
+
+      if (selectedParts.length === 0) {
+        if (!confirm("故障部位（申告症状）が選択されていません。このまま登録しますか？")) {
+          return;
+        }
+      }
+
+      const fullSn = "PF" + snVal.toUpperCase();
+
+      playSound('success');
+      triggerVibration('qr-scan');
+
+      processDeviceData({
+        qrData: "",
+        sn: fullSn,
+        mo: "",
+        deviceId: deviceId,
+        symptom: symptom,
+        isManual: true
+      });
+
+      closeManualModal();
+    }
+
+    // --- 共通データ処理ロジック ---
+    function processDeviceData({ qrData, sn, mo, deviceId, symptom, isManual }) {
+      state.currentLotCount++;
+      state.currentOrderCount++;
+
+      const lotSeqNumber = `${state.dateString}-${state.siteCode}-${String(state.currentLotCount).padStart(3, '0')}`;
+      const orderNumber = `${state.siteCode}-${state.currentOrderCount}`;
+      const timestamp = getCurrentTimestamp();
+
+      const record = {
+        timestamp: timestamp,
+        dateString: state.dateString,
+        siteCode: state.siteCode,
+        customer: state.customer,
+        lotSeqNumber: lotSeqNumber,
+        orderNumber: orderNumber,
+        qrData: qrData || "",
+        sn: sn,
+        mo: mo || "",
+        deviceId: deviceId || "",
+        symptom: symptom || "",
+        isManual: !!isManual
+      };
+      
+      state.scannedDataList.push(record);
+
+      const listArea = document.getElementById("result-list");
+      const div = document.createElement("div");
+      div.className = "list-item";
+      
+      const badgeHtml = isManual 
+        ? `<span class="badge badge-manual">手入力</span>` 
+        : `<span class="badge badge-scan">スキャン</span>`;
+
+      let detailSub = `注文:${orderNumber} | SN:${sn}`;
+      if (mo) detailSub += ` | MO:${mo}`;
+      if (deviceId) detailSub += ` | ID:${deviceId}`;
+      if (symptom) detailSub += ` | 症状:${symptom}`;
+
+      div.innerHTML = `
+        <div class="list-item-title">[${lotSeqNumber}] ${badgeHtml}</div>
+        <div class="list-item-sub">${detailSub}</div>
+      `;
+      listArea.insertBefore(div, listArea.firstChild);
+      
+      document.getElementById("count-display").innerText = state.scannedDataList.length;
+
+      printLabel(record);
+      showLog("scan-log", `登録完了: ${sn} ${deviceId ? '(' + deviceId + ')' : ''}`);
+    }
+
+    // ==========================================
+    // 3. プリンター出力 (Brother QL-820NWB)
+    // ==========================================
+    function printLabel(record) {
+      console.log(`[PRINT] ロット:${record.lotSeqNumber}, 受注:${record.orderNumber}, SN:${record.sn}, ID:${record.deviceId}, 症状:${record.symptom} -> to IP:${state.printerIp}`);
+      // ここにBrotherへ印刷コマンドを送る処理を組み込みます
+    }
+
+    // ==========================================
+    // 4. 作業終了（一括送信）
+    // ==========================================
+    async function finishJob() {
+      if (state.scannedDataList.length === 0) {
+        alert("データがありません。");
+        location.reload();
+        return;
+      }
+      if (!confirm("すべての更新を終えて終了しますか？")) return;
+
+      await stopCamera();
+      showLog("scan-log", "スプレッドシートへデータ送信中...");
+      document.getElementById("finish-btn").disabled = true;
+
+      try {
+        await callGasApi("finish", {
+          customer: state.customer,
+          siteCode: state.siteCode,
+          finalOrderCount: state.currentOrderCount,
+          finalLotCount: state.currentLotCount,
+          records: state.scannedDataList
+        });
+
+        playSound('success');
+        alert("すべてのデータを更新しました！お疲れ様でした。");
+        location.reload(); 
+
+      } catch (e) {
+        playSound('error');
+        showLog("scan-log", "エラー: " + e.message);
+        document.getElementById("finish-btn").disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
