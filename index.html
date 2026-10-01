@@ -25,7 +25,7 @@
     }
     body { 
       font-family: 'Inter', 'Noto Sans JP', sans-serif; 
-      background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 60%, #020617 100%); 
+      background: radial-gradient(circle at 50% 20%, #211d4f 0%, #0f172a 60%, #020617 100%); 
       background-attachment: fixed;
       color: var(--text-main); 
       min-height: 100vh; 
@@ -1253,11 +1253,39 @@
     }
 
     // ==========================================
-    // 3. プリンター出力 (Brother QL-820NWB)
+    // 3. プリンター出力 (Wi-Fi中継サーバー経由)
     // ==========================================
-    function printLabel(record) {
-      console.log(`[PRINT] ロット:${record.lotSeqNumber}, 受注:${record.orderNumber}, SN:${record.sn}, ID:${record.deviceId}, 症状:${record.symptom} -> to IP:${state.printerIp}`);
-      // ここにBrotherへ印刷コマンドを送る処理を組み込みます
+    async function printLabel(record) {
+      console.log(`[PRINT REQUEST] ロット:${record.lotSeqNumber}, SN:${record.sn} -> PC中継サーバーへ送信中...`);
+      
+      try {
+        // 先ほど教えていただいたPCのローカルIPアドレス
+        const serverUrl = "http://192.168.3.19:8080/";
+        
+        const response = await fetch(serverUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(record)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.status === "success") {
+          console.log(`[PRINT SUCCESS] ${record.sn} の印刷データをPCに送信しました。`);
+        } else {
+          console.error("PC中継サーバーからエラーが返されました:", result.message);
+          showLog("scan-log", "印刷エラー: " + result.message);
+        }
+      } catch (e) {
+        console.error("印刷リクエスト送信エラー:", e);
+        showLog("scan-log", "印刷エラー: PCと通信できません (192.168.3.19)");
+      }
     }
 
     // ==========================================
