@@ -496,7 +496,7 @@
     // ==========================================
     // 設定 (GAS URL)
     // ==========================================
-    const GAS_URL = "https://script.google.com/a/macros/kiriplaypark.com/s/AKfycbxQybnNaO8-3ZemD9AhQvUjHHUeOXKihG8t6kO8JwnSGTkm4dUx8t0WbMOm_SDGczUD/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxWjLF3d1ciYY9JN-waT_oX_3FY-JDOIYxsxM3kQgp0505UMKRhgQTKjYO_QfgEp8kh/exec";
 
     // アプリ状態（すべてスプレッドシートから動的に取得・更新されます）
     let state = {
@@ -609,7 +609,7 @@
     }
 
     // ==========================================
-    // GAS通信ラッパー (google.script.run / fetch 両対応)
+    // GAS通信ラッパー (google.script.run / fetch GET・POST 両対応)
     // ==========================================
     function callGasApi(action, params = {}) {
       return new Promise((resolve, reject) => {
@@ -645,33 +645,74 @@
           }
         }
 
-        // 2. 外部ブラウザからの fetch 通信
+        // 2. 外部ブラウザからの fetch 通信 (CORS / リダイレクト安全対応)
         if (!GAS_URL || GAS_URL.includes("ここに")) {
           reject(new Error("GAS_URLが設定されていません。"));
           return;
         }
 
-        fetch(GAS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: action, ...params })
-        })
-        .then(res => res.text())
-        .then(text => {
-          try {
-            const json = JSON.parse(text);
+        if (action === "init" || action === "start") {
+          // GETリクエストで高速・安全に取得
+          const queryParams = new URLSearchParams({ action: action, ...params });
+          const targetUrl = `${GAS_URL}?${queryParams.toString()}`;
+
+          fetch(targetUrl, {
+            method: "GET",
+            mode: "cors",
+            redirect: "follow"
+          })
+          .then(res => res.json())
+          .then(json => {
             if (json.status !== "success") {
-              throw new Error(json.message || "処理エラー");
+              throw new Error(json.message || "データ取得エラー");
             }
             resolve(json);
-          } catch (e) {
-            if (text.includes("<!DOCTYPE") || text.includes("<html") || text.includes("Google Accounts")) {
-              throw new Error("GASアクセス権限エラー: デプロイ設定で「アクセスできるユーザー」を「全員 (Anyone)」に設定してください。");
+          })
+          .catch(err => {
+            // GET失敗時のPOSTフォールバック
+            console.warn("GET request failed, trying POST fallback:", err);
+            fetch(GAS_URL, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify({ action: action, ...params })
+            })
+            .then(res => res.text())
+            .then(text => {
+              try {
+                const json = JSON.parse(text);
+                if (json.status !== "success") throw new Error(json.message || "処理エラー");
+                resolve(json);
+              } catch (e) {
+                throw new Error("GAS通信エラー: " + (e.message || text));
+              }
+            })
+            .catch(reject);
+          });
+
+        } else {
+          // finish 等の更新リクエスト (POST)
+          fetch(GAS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: action, ...params })
+          })
+          .then(res => res.text())
+          .then(text => {
+            try {
+              const json = JSON.parse(text);
+              if (json.status !== "success") {
+                throw new Error(json.message || "処理エラー");
+              }
+              resolve(json);
+            } catch (e) {
+              if (text.includes("<!DOCTYPE") || text.includes("<html") || text.includes("Google Accounts")) {
+                throw new Error("GASアクセス権限エラー: デプロイ設定で「アクセスできるユーザー」を「全員 (Anyone)」に設定してください。");
+              }
+              throw new Error(e.message || "不正なレスポンスを受信しました");
             }
-            throw new Error(e.message || "不正なレスポンスを受信しました");
-          }
-        })
-        .catch(reject);
+          })
+          .catch(reject);
+        }
       });
     }
 

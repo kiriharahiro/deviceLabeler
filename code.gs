@@ -2,32 +2,38 @@
 // PC Repairer バックエンド (GAS)
 // ==========================================
 
-// Webアプリ表示 (GETリクエスト時)
+// Webアプリ表示 または GET API リクエスト時
 function doGet(e) {
-  // パラメータなし、または mode=app の場合は HTML を配信
-  if (!e || !e.parameter || !e.parameter.mode || e.parameter.mode === "app") {
+  const params = (e && e.parameter) ? e.parameter : {};
+
+  // action パラメータがある場合、または mode=json の場合は JSON API として応答
+  if (params.action || params.mode === "json") {
     try {
-      return HtmlService.createHtmlOutputFromFile("index")
-        .setTitle("PC Repairer - Device Manager")
-        .addMetaTag("viewport", "width=device-width, initial-scale=1.0")
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      const result = handleApiRequest(params);
+      return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
     } catch (err) {
-      // index.html がGAS内に未作成の場合はJSONステータスを返す
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
       return ContentService.createTextOutput(JSON.stringify({
-        status: "success",
-        message: "PC Repairer GAS Web App is running.",
-        data: getMasterSettings(ss)
+        status: "error",
+        message: err.toString()
       })).setMimeType(ContentService.MimeType.JSON);
     }
   }
 
-  // mode=json 等のAPIリクエスト時はJSONを返す
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ContentService.createTextOutput(JSON.stringify({
-    status: "success",
-    data: getMasterSettings(ss)
-  })).setMimeType(ContentService.MimeType.JSON);
+  // それ以外（ブラウザで直接URLを開いた場合など）は HTML を配信
+  try {
+    return HtmlService.createHtmlOutputFromFile("index")
+      .setTitle("PC Repairer - Device Manager")
+      .addMetaTag("viewport", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no")
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } catch (err) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      message: "PC Repairer GAS Web App is running.",
+      data: getMasterSettings(ss)
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 // 外部 fetch からの POST 通信
