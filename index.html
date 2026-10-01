@@ -1046,6 +1046,8 @@
     // 2. 読み取り＆手入力ロジック
     // ==========================================
     let lastScanTime = 0;
+    let pendingScan = null;
+
     function onQrScanSuccess(decodedText) {
       const now = Date.now();
       if (now - lastScanTime < 3000) return; 
@@ -1055,34 +1057,31 @@
       playSound('qr-scan');
       triggerVibration('qr-scan');
 
-      if (rawText.length < 18) {
-        showLog("scan-log", `QR検出: ${rawText} (18桁未満のため手入力または再スキャンしてください)`);
-        // 桁数が異なる場合でもSNとして扱えるよう柔軟にパース
-        processDeviceData({
-          qrData: rawText,
-          sn: rawText.substring(0, 8).toUpperCase(),
-          mo: rawText.length > 8 ? rawText.substring(8).toUpperCase() : "",
-          deviceId: "",
-          symptom: "",
-          isManual: false
-        });
-        return;
+      const sn = rawText.substring(0, 8).toUpperCase();
+      const mo = rawText.length > 8 ? rawText.substring(8, 18).toUpperCase() : "";
+
+      let displaySn = sn;
+      if (displaySn.startsWith("PF")) {
+        displaySn = displaySn.substring(2);
       }
 
-      const sn = rawText.substring(0, 8).toUpperCase();
-      const mo = rawText.substring(8, 18).toUpperCase();
-      processDeviceData({
+      pendingScan = {
         qrData: rawText,
-        sn: sn,
         mo: mo,
-        deviceId: "",
-        symptom: "",
         isManual: false
-      });
+      };
+
+      openManualModal(displaySn);
     }
 
     // --- 手入力モーダル制御 ---
-    function openManualModal() {
+    function openManualModal(initialSn = "") {
+      if (typeof initialSn !== 'string') {
+        initialSn = "";
+      }
+      if (!initialSn) {
+        pendingScan = null;
+      }
       const prefixSpan = document.getElementById("modal-device-id-prefix");
       const descSpan = document.getElementById("modal-id-rule-desc");
       const custNameSpan = document.getElementById("modal-customer-name");
@@ -1090,7 +1089,7 @@
       const snInput = document.getElementById("manual-sn-input");
       
       custNameSpan.innerText = state.customer;
-      snInput.value = "";
+      snInput.value = initialSn;
       numberInput.value = "";
 
       if (state.customer === "加須市") {
@@ -1136,6 +1135,7 @@
 
     function closeManualModal() {
       document.getElementById("manual-modal").classList.add("hidden");
+      pendingScan = null;
     }
 
     function submitManualInput() {
@@ -1177,14 +1177,26 @@
       playSound('success');
       triggerVibration('qr-scan');
 
-      processDeviceData({
-        qrData: "",
-        sn: fullSn,
-        mo: "",
-        deviceId: deviceId,
-        symptom: symptom,
-        isManual: true
-      });
+      if (pendingScan) {
+        processDeviceData({
+          qrData: pendingScan.qrData,
+          sn: fullSn,
+          mo: pendingScan.mo,
+          deviceId: deviceId,
+          symptom: symptom,
+          isManual: false
+        });
+        pendingScan = null;
+      } else {
+        processDeviceData({
+          qrData: "",
+          sn: fullSn,
+          mo: "",
+          deviceId: deviceId,
+          symptom: symptom,
+          isManual: true
+        });
+      }
 
       closeManualModal();
     }
