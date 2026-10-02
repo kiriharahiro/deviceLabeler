@@ -1,4 +1,4 @@
-# Print Relay Server（ラベル印刷サーバー）仕様書およびトラブルシューティング手順書
+﻿# Print Relay Server（ラベル印刷サーバー）仕様書およびトラブルシューティング手順書
 
 ## 1. システム仕様
 
@@ -7,14 +7,14 @@
 
 ### 構成ファイル・使用技術
 * **サーバー本体**: `print_server.ps1` (PowerShellスクリプト)
-* **ラベルテンプレート**: `C:\KiriPlayPark\label.lbx` (P-touch Editor テンプレートファイル)
+* **ラベルテンプレート**: `C:\KiriPlayPark\PcRepairLabel.lbx` (P-touch Editor テンプレートファイル)
 * **使用ライブラリ**: Brother b-PAC SDK (COMオブジェクト `bpac.Document`)
 * **待ち受けポート**: 8080ポート (`http://<PCのIPアドレス>:8080/`)
 
 ### 処理の流れ
 1. `print_server.ps1` を起動すると、8080ポートでリクエストの待ち受けを開始する。
 2. スマホ等からPOSTリクエスト（JSON形式）を受け取る。
-3. `C:\KiriPlayPark\label.lbx` をプログラム裏側で開く。
+3. `C:\KiriPlayPark\PcRepairLabel.lbx` をプログラム裏側で開く。
 4. 受け取ったデータ（Lot, SN, ID, 症状など）をテンプレートの各テキスト枠に流し込む。
 5. 指定されたプリンター名（例:`Brother QL-820NWB (2 コピー)`）を指定し、印刷を実行する。
 
@@ -26,7 +26,7 @@
 これは主に **「プリンターのIPアドレス変更などにより、Windows上で同じプリンターが複数（コピー1、コピー2など）作成され、プログラムが迷子になっている」** ことが原因です。
 
 ### 手順①：正しいプリンター名の特定（P-touch Editorでの確認）
-1. `C:\KiriPlayPark\label.lbx` をダブルクリックし、**P-touch Editor** を開きます。
+1. `C:\KiriPlayPark\PcRepairLabel.lbx` をダブルクリックし、**P-touch Editor** を開きます。
 2. P-touch Editor の印刷画面を開き、プリンターの選択欄を確認します。
 3. リストの中から「現在実際に印刷できるプリンター（例: `Brother QL-820NWB (2 コピー)` や `Brother QL-820NWB - 3` など）」を選び、テスト印刷を行います。
 4. 印刷に成功したら、その **プリンターの正確な名前** をメモします。

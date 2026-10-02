@@ -15,7 +15,8 @@ try {
     Write-Host " "
     Write-Host " Keep this window open. Press Ctrl+C to stop."
     Write-Host "=====================================================`n" -ForegroundColor Cyan
-} catch {
+}
+catch {
     Write-Host "Error: Failed to start listener." -ForegroundColor Red
     Write-Host $_.Exception.Message
     Write-Host "`nRun PowerShell as Administrator and execute this command to allow the port:" -ForegroundColor Yellow
@@ -49,7 +50,8 @@ while ($listener.IsListening) {
                 $htmlBytes = [System.IO.File]::ReadAllBytes($indexPath)
                 $response.ContentType = "text/html; charset=utf-8"
                 $response.OutputStream.Write($htmlBytes, 0, $htmlBytes.Length)
-            } else {
+            }
+            else {
                 $response.StatusCode = 404
             }
             $response.Close()
@@ -62,14 +64,25 @@ while ($listener.IsListening) {
             $data = $body | ConvertFrom-Json
 
             $sn = $data.sn
-            Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Print request received: SN=$sn"
+            $lot = $data.lotSeqNumber # 追加: ログで確認するため
+            Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Print request received: SN=$sn, Lot=$lot"
 
             try {
                 $bpac = New-Object -ComObject "bpac.Document"
-                $isOpen = $bpac.Open("C:\KiriPlayPark\label.lbx")
+                $isOpen = $bpac.Open("C:\KiriPlayPark\PcRepairLabel.lbx")
                 
                 if ($isOpen) {
                     $bpac.GetObject("txtLot").Text = $data.lotSeqNumber
+                    
+                    # QRコードへのデータセット（確実なバーコード用APIを使用）
+                    $idx = $bpac.GetBarcodeIndex("qrLot")
+                    if ($idx -ne -1) {
+                        $bpac.SetBarcodeData($idx, $data.lotSeqNumber) | Out-Null
+                        Write-Host "  -> QR Code (qrLot) updated with: $($data.lotSeqNumber)" -ForegroundColor Cyan
+                    } else {
+                        Write-Host "  -> WARNING: Object 'qrLot' NOT FOUND in PcRepairLabel.lbx" -ForegroundColor Yellow
+                    }
+
                     $bpac.GetObject("txtSN").Text = $data.sn
                     $bpac.GetObject("txtID").Text = $data.deviceId
                     $bpac.GetObject("txtSymptom").Text = $data.symptom
@@ -85,7 +98,7 @@ while ($listener.IsListening) {
                     $resString = '{"status":"success"}'
                     Write-Host "  -> Print SUCCESS" -ForegroundColor Green
                 } else {
-                    $resString = '{"status":"error", "message":"Could not open label.lbx"}'
+                    $resString = '{"status":"error", "message":"Could not open PcRepairLabel.lbx"}'
                     Write-Host "  -> Error: Cannot open lbx file" -ForegroundColor Red
                 }
             } catch {
