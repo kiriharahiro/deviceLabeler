@@ -66,13 +66,16 @@ while ($listener.IsListening) {
 
             try {
                 $bpac = New-Object -ComObject "bpac.Document"
-                $isOpen = $bpac.Open("G:\共有ドライブ\KiriPlayPark\Tool\MyLabels\KiriPlayPark\label.lbx")
+                $isOpen = $bpac.Open("C:\KiriPlayPark\label.lbx")
                 
                 if ($isOpen) {
                     $bpac.GetObject("txtLot").Text = $data.lotSeqNumber
                     $bpac.GetObject("txtSN").Text = $data.sn
                     $bpac.GetObject("txtID").Text = $data.deviceId
                     $bpac.GetObject("txtSymptom").Text = $data.symptom
+                    
+                    # ↓ P-touch Editorを使わずに、直接プリンターを指定します
+                    $bpac.SetPrinter("Brother QL-820NWB (2 コピー)", $false) | Out-Null
                     
                     $bpac.StartPrint("", 0) | Out-Null
                     $bpac.PrintOut(1, 0) | Out-Null

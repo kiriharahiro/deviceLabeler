@@ -836,6 +836,11 @@
           const devices = await Html5Qrcode.getCameras();
           if (devices && devices.length) {
             state.availableCameras = devices;
+            // 最初に背面カメラ(back/environment/背面/リア)を探す
+            const backCameraIndex = devices.findIndex(device => /back|environment|背面|リア/i.test(device.label));
+            if (backCameraIndex !== -1) {
+              state.currentCameraIndex = backCameraIndex;
+            }
           }
         } catch (camErr) {
           console.warn("getCameras warning (will try direct facingMode):", camErr);
@@ -887,7 +892,12 @@
 
       let cameraParam;
       if (state.availableCameras.length > 0) {
-        cameraParam = state.availableCameras[state.currentCameraIndex].id;
+        // 初期状態でラベルから背面判定できなかった場合は、確実を期してfacingModeを指定
+        if (state.currentCameraIndex === 0 && !/back|environment|背面|リア/i.test(state.availableCameras[0].label)) {
+          cameraParam = { facingMode: "environment" };
+        } else {
+          cameraParam = state.availableCameras[state.currentCameraIndex].id;
+        }
       } else {
         cameraParam = { facingMode: "environment" };
       }
@@ -1130,7 +1140,11 @@
       });
 
       document.getElementById("manual-modal").classList.remove("hidden");
-      snInput.focus();
+      if (initialSn) {
+        numberInput.focus(); // QR読み取り成功時は Device ID にフォーカス
+      } else {
+        snInput.focus();     // 手動遷移時は S/N にフォーカス
+      }
     }
 
     function closeManualModal() {
