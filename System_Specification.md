@@ -1,4 +1,4 @@
-# PC Repairer - Device Manager システム仕様書
+﻿# PC Repairer - Device Manager システム仕様書
 
 > ※ 最新・完全版の日本語仕様書は [仕様書：PC修理デバイス管理システム.md](file:///g:/共有ドライブ/KiriPlayPark/Tool/Antigravity/kiriplaypark-projects/KiriPlayPark/PcRepairer/仕様書：PC修理デバイス管理システム.md) および [操作手順書：PC修理デバイス管理システム.md](file:///g:/共有ドライブ/KiriPlayPark/Tool/Antigravity/kiriplaypark-projects/KiriPlayPark/PcRepairer/操作手順書：PC修理デバイス管理システム.md) をご参照ください。
 
