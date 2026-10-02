@@ -47,6 +47,8 @@ graph TD
     F -->|最終受注番号・本日ロット追番更新| C
 ```
 
+![ファイル構成・システム全体像](./images/folder_view.jpg)
+
 ### 2.1 フロントエンド（Webアプリケーション）
 * **ファイル**: `index.html` (1ファイル構成)
 * **UIデザイン**: ガラスモーフィズム ＆ 洗練されたダークモード（Inter / Noto Sans JP）
@@ -152,17 +154,26 @@ graph TD
 
 ## 5. プリンター連携仕様 (Brother QL-820NWB)
 
-端末の登録（スキャンまたは手入力）が完了した瞬間に、JavaScript 内の `printLabel(record)` 関数が呼び出されます。
+端末の登録（スキャンまたは手入力）が完了した瞬間に、JavaScript 内の `printLabel(record)` 関数が呼び出され、印刷コマンドが送信されます。
 
-* **接続方式**: Wi-Fi / 有線LAN経由のネットワーク通信
+* **接続方式**: 印刷中継サーバー（Print Relay Server）経由でのローカルネットワーク通信
+* **中継サーバー**: `print_server.ps1` (PowerShellスクリプト。ポート8080で待ち受け)
+* **ラベルテンプレート**: `PcRepairLabel.lbx` (P-touch Editor テンプレート)
 * **印字項目**:
-  1. 受注ロットシーケンス番号（バーコード/QRおよびテキスト）
-  2. 受注番号
-  3. S/N
-  4. Device ID（手入力時）
-  5. 故障部位（手入力時）
+  1. 受注ロットシーケンス番号（qrLot バーコード および txtLot テキスト）
+  2. 受注番号 (txtSN に割当)
+  3. S/N (txtSN)
+  4. Device ID (txtID)
+  5. 故障部位 (txtSymptom)
 * **通信実装方式**:
-  * Brother b-PAC SDK (Web Print Server) または Raw Socket / HTTP POST による ESC/P・P-touch テンプレートコマンド送信に対応可能な構造となっています。
+  * スマホブラウザからローカルのWindows PC（中継サーバー）へ HTTP POST で JSON を送信。
+  * `print_server.ps1` が Brother b-PAC SDK (COMオブジェクト `bpac.Document`) を利用してテンプレートへデータを流し込み、印刷を実行します。
+
+![印刷サーバーの稼働画面](./images/cmd_prompt.jpg)
+
+![P-touch Editorのレイアウト設定](./images/label_layout.jpg)
+
+![印刷されたラベルの出力結果](./images/printed_label.pdf)
 
 ---
 
